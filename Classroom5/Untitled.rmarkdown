@@ -1,0 +1,82 @@
+---
+title: "Class 05: Data Visualization with GGPLOT"
+author: "Forrest Wang"
+format: pdf
+---
+
+```{r}
+library(ggplot2)
+ggplot()
+
+```
+
+```{r}
+mpg
+```
+
+
+
+Install.Packages("ggplot2")
+
+
+Our fist plot of displ vs hwy
+All ggplot() graphs are made in the same way.
+data + aes + geoms
+
+
+```{r}
+ggplot(mpg)+
+  aes(x=displ, y=hwy)+
+  geom_point() + geom_smooth(method = lm, se = FALSE)
+```
+
+
+
+# Plot of gene expression data
+# first read the data from online. 
+
+
+```{r}
+url <- "https://bioboot.github.io/bimm143_S20/class-material/up_down_expression.txt"
+genes <- read.delim(url)
+head(genes)
+```
+
+
+> How many genes are in the dataset?
+
+
+```{r}
+nrow(genes)
+```
+
+
+> Whata re the colnames?
+
+
+```{r}
+colnames(genes)
+```
+
+
+A first version of this data Condition1 vs Condition2
+
+```{r}
+p <- ggplot(genes) +
+  aes(x=Condition1, y=Condition2, color=State) +
+  geom_point(alpha=0.7)
+p + scale_colour_manual(values=c("blue","gray","red")) + 
+    labs(title="Gene Expression Changes Upon Drug Treatment", x="Control (No Drug) ", y="Drug Treatment")
+```
+
+
+Comment: Use Alpha to change transparency of datapoints
+
+
+To get a just the state columne:
+
+```{r}
+table (genes$State)
+
+```
+

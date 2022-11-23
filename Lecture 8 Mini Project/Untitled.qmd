@@ -1,0 +1,213 @@
+---
+title: "Lecture 8 Breast Cell Analysis"
+author: "Forrest Wang"
+format: pdf
+---
+
+#1. Exploratory Data Analysis
+Preparing the Data:
+```{r}
+fna.data <- "https://bioboot.github.io/bimm143_F22/class-material/WisconsinCancer.csv"
+wisc.df <- read.csv(fna.data, row.names = 1)
+```
+
+Use -1 to remove 1st column here
+
+```{r}
+wisc.df
+wisc.data <- wisc.df[, -1]
+diagnosis <- as.factor(wisc.df$diagnosis)
+```
+
+Questions
+
+  Q1. How many oservations are in this dataset?
+  A1: 569 observations
+```{r}
+dim(wisc.data)
+```
+
+  Q2: How many of the observations have a malignant diagnosis?
+  A2: 212 observations have malignant diagnosis
+```{r}
+table(wisc.df$diagnosis)
+```
+
+  Q3: How many variables/features in the data suffixed w/ _mean?
+  A3: 10 variables
+```{r}
+matches <- grep("_mean", colnames(wisc.data)) 
+length(matches)
+```
+
+#2. Principal Component Analysis
+Check column means & stddev
+```{r}
+colMeans(wisc.data)
+```
+```{r}
+apply(wisc.data,2,sd)
+```
+
+Perform PCA on wisc.data by completing the following code:
+```{r}
+wisc.pr <- prcomp(wisc.data, scale=TRUE)
+```
+
+Examine result summary
+```{r}
+summary(wisc.pr)
+```
+
+  Q5: How many PCs required to describe >70% of original variance in data?
+  A5: 3PCs
+  
+  Q6: What stands out to you about this plot? Is it easy/difficult to interpret?
+  A5: This plot is extremely difficult to examine and extract meaning from because none of the points are seperated, but overlapping and is unreadable
+  
+```{r}
+biplot(wisc.pr)
+```
+
+
+#Scatter plot observations by components 1 & 2
+  
+  Q8: Generate similar plot for principal components 1 & 3. What do you notice about these plots?
+  A8: The 2 components and their separation are closely resembling, although PC1 illustrates additional separation
+  
+Repeat for components 1 & 3
+```{r}
+plot(wisc.pr$x[, 1], wisc.pr$x[,3],col = diagnosis,
+     xlab = "PC1", ylab = "PC3")
+```
+  
+  
+Create a data.frame for ggplot
+```{r}
+df <- as.data.frame(wisc.pr$x)
+df$diagnosis <- diagnosis
+```
+
+Load the ggplot 2 package
+```{r}
+library(ggplot2)
+```
+
+Calculate variance of each component
+```{r}
+pr.var <- wisc.pr$sdev^2
+head(pr.var)
+```
+
+Variance explained by each principal component: pve
+```{r}
+pve <- pr.var / sum(pr.var)
+```
+
+
+Plot variance explained for each principal
+```{r}
+plot(pve, xlab = "Principal Component",
+    ylab = "Proportion of Variance Explained",
+    ylim = c(0, 1), type = "o")
+```
+
+#3. Hierarchical clustering
+Scale the wisc.data using the "scale()" func
+
+```{r}
+data.scaled <-scale(wisc.data)
+```
+
+```{r}
+data.dist <- dist(data.scaled)
+```
+
+```{r}
+wisc.hclust <- hclust(data.dist)
+```
+
+  Q11: Using the plot() and aline() functions, what is the height at which the clustering model has 4 clusters?
+  A11: The height is between 19 and 20 for 4 clusters
+
+```{r}
+plot(wisc.hclust)
+```
+
+  Q12: Can you find a better cluster vs diagnosis match by cutting into a different number of clusters between 2 and 10?
+  A12: Yes. A better cluster amount would be either 4 or 5 in which separation's significant impact is lost when the cluster number exceed 5. Conversely, when cluster#<5, separation doesn't exist.
+  
+  Q13: Which method gives your favorite result for the same data.disc dataset? Explain your reasoning?
+  A13: "Ward.D2" gives my favorate results because the two groups are separated more distinctly
+
+```{r}
+wisc.pr.hclust <- hclust(data.dist, method = "ward.D2")
+grps <- cutree(wisc.pr.hclust, k=2)
+table(grps)
+```
+
+```{r}
+grps <- cutree(wisc.pr.hclust, k=2)
+table(grps)
+```
+
+```{r}
+plot(wisc.pr$x[,1:2], col=diagnosis)
+```
+
+```{r}
+wisc.pr.hclust <- hclust(dist(wisc.pr$x[, 1:7]), method="ward.D2")
+wisc.pr.hclust.clusters <- cutree(wisc.pr.hclust, k=2)
+```
+
+  Q15: How well does the newly created model with 4 clusters separate out the diagnoses?
+  A15: The newer model illustrates much better variation and supports said diagnostic findings.
+  
+Compare to actual diagnoses
+
+  Q16: How well does the k-means & heirarchical clustering models you created in previous section do in terms of separating the diagnoses?
+  A16: K_means & heirarchical clustering models created in previous section is useful in terms of separating diagnoses but it is much better interpreted visually through a graph in my opinion.
+
+
+#6. Sensitivity/Specificity
+  Q17. Which of your analysis procedures resulted in a clustering model with the best specificity? How about sensitivity
+  
+1. In terms of specificity, I believe pca hclust demonstrates the greatest visual measurements
+
+```{r}
+HclustSpec <- 343/(343+40)
+```
+
+kmeans
+```{r}
+kmeansSpec <- 343/(343+37)
+```
+
+pca hclust
+```{r}
+pcaHclustSpec <- 329/(329+24)
+```
+
+2. In terms of sensitivity, I believe hclust has the greatest results
+```{r}
+HclustSens <- 165/(165+12)
+```
+
+Kmeans
+```{r}
+kmeansSense <- 175/(175+14)
+```
+
+pca hclust
+```{r}
+pcaHclustSens <- 188/(188+28)
+```
+
+
+
+
+
+
+
+
+

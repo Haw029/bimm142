@@ -1,0 +1,76 @@
+---
+title: "Lab 14 Genome Informatics with Homework"
+format: pdf
+---
+
+##Introduction to Genome Informatics Lab
+#Section 1: Identify genetic variants of interest
+
+Q5: Q5: What proportion of the Mexican Ancestry in Los Angeles sample population (MXL) are homozygous for the asthma associated SNP (G|G)?
+
+Downloaded CSV file from Ensemnble < https://uswest.ensembl.org/Homo_sapiens/Variation/Sample?db=core;r=17:39894595-39895595;v=rs8067378;vdb=variation;vf=105535077
+
+Read CSV file and analyze the sample:
+
+```{r}
+mxl <- read.csv("373531-SampleGenotypes-Homo_sapiens_Variation_Sample_rs8067378 (1).csv")
+head(mxl)
+```
+
+```{r}
+table(mxl$Genotype..forward.strand.)
+```
+
+A5:
+```{r}
+table(mxl$Genotype..forward.strand.)/nrow(mxl)*100
+```
+14% are homozygous for asthma within MXL population sample in LA
+
+
+Q6. Back on the ENSEMBLE page, use the “search for a sample” field above to find the particular sample HG00109. This is a male from the GBR population group. What is the genotype for this sample?
+
+Now let's look at diff population, specifically GBR, "Great Britain"
+
+```{r}
+gbr <- read.csv("373522-SampleGenotypes-Homo_sapiens_Variation_Sample_rs8067378.csv")
+```
+
+Find proportion of G|G
+```{r}
+round(table(gbr$Genotype..forward.strand.)/nrow(gbr)*100,2 )
+```
+
+A: 29.67% are homozygous for asthma within GBR population sample in Great Britain 
+
+#Section 4: Population Scale Analysis
+How many samples doe we have?
+```{r}
+expr <- read.table(("rs8067378_ENSG00000172057.6.txt"))
+head(expr)
+```
+Total individuals?
+```{r}
+nrow(expr)
+```
+
+How many of each genotype?
+```{r}
+table(expr$geno)
+```
+
+How do we deplay these results?
+```{r}
+library(ggplot2)
+```
+
+let's make a boxplot with this data:
+```{r}
+ggplot(expr) + aes(x=geno, exp, fill=geno) + 
+  geom_boxplot(notch=TRUE)
+```
+Q14: Generate a boxplot with a box per genotype, what could you infer from the relative
+expression value between A/A and G/G displayed in this plot? Does the SNP effect the
+expression of ORMDL3?
+
+A14: According to the boxplot above, epression of ORMDL3 is highest when individuals experess homologous alleles A|A, and lowest for G|G. The SNP does effect the expression of ORDML3

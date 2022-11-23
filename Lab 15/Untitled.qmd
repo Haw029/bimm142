@@ -1,0 +1,228 @@
+---
+title: "Lab 15: Transcriptomics and the analysis of RNA-Seq data"
+format: pdf
+author: "forrest wang"
+---
+
+##CLASS 15
+#Overview
+Context: smooth muscle cells in airway treated with dexomethasone (glucocorticoid steroid, anti-inflammatory)
+Focus Gene: CRISPLD2
+
+In class, we will work with published RNA-seq experimen where airway smooth muscles (ASMs) were treated with dexamethasone
+
+#1. Bioconductor & DESeq2 Setups
+Check Installation
+```{r}
+library(BiocManager)
+library(DESeq2)
+```
+
+
+#2. Import countData & colData
+Will will used good ole' 'read.csd()' to read the two things we need for analysis:
+- count data
+- ccol data (metadata)
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <- read.csv("airway_metadata.csv")
+```
+
+Q1.How many genes do I have?
+A1: 38694
+```{r}
+nrow(counts)
+```
+
+Let's have a look at the metadata
+Q2: How many control cell lines do we have?
+A2: 4 controls
+```{r}
+head(metadata)
+```
+And the 'counts' data
+```{r}
+head(counts)
+```
+
+First we should check the correspondence of the metadata & count data
+```{r}
+metadata$id
+```
+
+```{r}
+colnames(counts)
+```
+
+To check that these are all in the same order, we can use '==' test of equality.
+```{r}
+metadata$id == colnames(counts)
+```
+
+```{r}
+all(c(T,T,T,T,T,T))
+```
+
+
+#3. Toy differential gene expression
+
+##Analysis via comparison of CONTROL vs TREATED
+The "treated" have the dex drug and the "control" do not.
+1st, I need to be able to extract just the "control" columnes in the 'counts' data set
+
+```{r}
+control.inds <- metadata$dex == "control"
+control <- metadata[control.inds,]
+control$id
+```
+
+Now I can use this to access just the "control" column of my 'counts' data...
+```{r}
+control.counts <- counts[,control$id]
+head(control.counts)
+```
+Find the mean count value for each transcript/gene by binding the 'rowMeans()'
+```{r}
+control.mean <- rowMeans(control.counts)
+head(control.mean)
+```
+
+Q3. How would you make the above code in either approach more robust?
+A3: Now we find a mean value for all the "treated" columns in the same way (simplified)
+```{r}
+treated.id <- metadata[metadata$dex == "treated","id"]
+treated.mean <- rowMeans(counts[,treated.id])
+```
+
+Q4. Follow the same procedure for the treated samples (i.e. calculate the mean per gene across drug treated samples and assign to a labeled vector called treated.mean)
+A4:
+"treated.id <- metadata[metadata$dex == "treated","id"]"
+"treated.mean <- rowMeans(counts[,treated.id])"
+
+Now I have 'control.mean' and 'treated.mean'. Let's put them together for safe keeping & ease of use later by combining them.
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+head(meancounts)
+```
+
+Plotting things:
+```{r}
+plot(meancounts)
+```
+Q5 (b).You could also use the ggplot2 package to make this figure producing the plot below. What geom_?() function would you use for this plot?
+Q5: geom_point
+
+This is very skewed and over a wide range, we use log to adjust 
+Q6. Try plotting both axes on a log scale. What is the argument to plot() that allows you to do this? 
+A6: plot(meancounts, log="xy")
+```{r}
+plot(meancounts, log="xy")
+```
+We like working with log transformed data as it can help us make things more straightforward for interpretation
+If we have no change
+```{r}
+log(20/20)
+```
+
+What about if we had a doubling?
+```{r}
+log2(40/20)
+log2(10/20)
+```
+
+We like working with log2 fold-change values. Let's calculate them for our data
+```{r}
+meancounts$r2fc <- log2(meancounts$treated.mean/meancounts$control.mean)
+head(meancounts)
+```
+We want to filter out any genes (that is rows) where we have ZERO count data (Ex:ENSG00000000005)
+```{r}
+to.keep.inds <- rowSums(meancounts[,1:2] == 0) == 0
+head(to.keep.inds)
+```
+
+```{r}
+mycounts <- meancounts[to.keep.inds,]
+nrow(mycounts)
+```
+
+A common threshold for calling genes as differentially expressed is a log2 fold-change of +2 or -2.
+
+```{r}
+sum(mycounts$log2fc >= +2)
+```
+= 314
+
+What percent is this?
+```{r}
+round((sum(mycounts$log2fc >= -2) / nrow(mycounts)) * 100, 2)
+```
+= 2.22
+
+#4. DESeq2 analysis
+
+We need some stats to check if the drug induced diff is significant!
+Let's turn to doing this the correct way with the DESeq2 package.
+```{r, message=FALSE, warning=FALSE}
+library(DESeq2)
+```
+
+Main function in the DESeq package is called 'deseq()'. It wants our count data & our colData (metadata) as input in a specific way.
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                      colData = metadata,
+                       design = ~dex)
+```
+
+Now I can run the DESeq analysis
+```{r}
+dds <- DESeq(dds)
+results(dds)
+```
+Noe what we have got so far is the log2 fold-change and the adjusted p-value for the significance
+
+```{r}
+res <- results(dds)
+
+head(res)
+```
+
+
+#6. Data Visualization
+
+
+A First plot
+```{r}
+plot(res$log2FoldChange, res$padj)
+```
+^Plot sucked cause all P-values are down below zero. They're upsidedown like Austrailia
+
+```{r}
+plot(res$log2FoldChange, log(res$padj))
+```
+```{r}
+log(0.05)
+```
+
+We can flip the y-axis so the plot doesn't look upside-down
+```{r}
+plot(res$log2FoldChange, -log(res$padj))
+
+mycols <- rep("gray", nrow(res))
+mycols[ abs(res$log2FoldChange) > 2 ]  <- "red" 
+
+inds <- (res$padj < 0.01) & (abs(res$log2FoldChange) > 2 )
+mycols[ inds ] <- "blue"
+
+plot( res$log2FoldChange,  -log(res$padj), 
+ col=mycols, ylab="-Log(P-value)", xlab="Log2(FoldChange)" )
+
+abline(v=c(-2,2), col="gray", lty=2)
+abline(h=-log(0.1), col="gray", lty=2)
+
+```
+
+
+
+#7. Pathway analysis
